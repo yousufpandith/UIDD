@@ -1,0 +1,29 @@
+<!DOCTYPE RCC><RCC version="1.0">
+    <qresource prefix="/translations">
+        <file alias="bg">locale/uidd_bg.qm</file>
+        <file alias="ca">locale/uidd_ca.qm</file>
+        <file alias="cs">locale/uidd_cs.qm</file>
+        <file alias="da">locale/uidd_da.qm</file>
+        <file alias="de">locale/uidd_de.qm</file>
+        <file alias="en">locale/uidd_en.qm</file>
+        <file alias="en_US">locale/uidd_en_US.qm</file>
+        <file alias="es">locale/uidd_es.qm</file>
+        <file alias="fi">locale/uidd_fi.qm</file>
+        <file alias="fr_FR">locale/uidd_fr_FR.qm</file>
+        <file alias="it">locale/uidd_it.qm</file>
+        <file alias="ja">locale/uidd_ja.qm</file>
+        <file alias="ko_KR">locale/uidd_ko_KR.qm</file>
+        <file alias="nl">locale/uidd_nl.qm</file>
+        <file alias="pl">locale/uidd_pl.qm</file>
+        <file alias="pt">locale/uidd_pt.qm</file>
+        <file alias="pt_BR">locale/uidd_pt_BR.qm</file>
+        <file alias="ro_RO">locale/uidd_ro_RO.qm</file>
+        <file alias="ru">locale/uidd_ru.qm</file>
+        <file alias="sk">locale/uidd_sk.qm</file>
+        <file alias="sv">locale/uidd_sv.qm</file>
+        <file alias="tr">locale/uidd_tr.qm</file>
+        <file alias="uk">locale/uidd_uk.qm</file>
+        <file alias="zh_CN">locale/uidd_zh_CN.qm</file>
+        <file alias="zh_TW">locale/uidd_zh_TW.qm</file>
+    </qresource>
+</RCC>

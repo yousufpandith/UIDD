@@ -1,0 +1,67 @@
+#!/bin/bash
+#
+#  uiddd The Uidd core server.
+#
+#
+# chkconfig: 345 80 20
+# description: uiddd
+# processname: uiddd
+#
+
+# Source function library.
+. /etc/init.d/functions
+
+# you can override defaults in /etc/sysconfig/uiddd, see below
+if [ -f /etc/sysconfig/uiddd ]; then
+        . /etc/sysconfig/uiddd
+fi
+
+RETVAL=0
+
+prog=uiddd
+# you can override the lockfile via BITCOIND_LOCKFILE in /etc/sysconfig/uiddd
+lockfile=${BITCOIND_LOCKFILE-/var/lock/subsys/uiddd}
+
+# uiddd defaults to /usr/bin/uiddd, override with BITCOIND_BIN
+bitcoind=${BITCOIND_BIN-/usr/bin/uiddd}
+
+# uiddd opts default to -disablewallet, override with BITCOIND_OPTS
+bitcoind_opts=${BITCOIND_OPTS}
+
+start() {
+    echo -n $"Starting $prog: "
+    daemon $DAEMONOPTS $bitcoind $bitcoind_opts
+    RETVAL=$?
+    echo
+    [ $RETVAL -eq 0 ] && touch $lockfile
+    return $RETVAL
+}
+
+stop() {
+    echo -n $"Stopping $prog: "
+    killproc $prog
+    RETVAL=$?
+    echo
+    [ $RETVAL -eq 0 ] && rm -f $lockfile
+    return $RETVAL
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status $prog
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: service $prog {start|stop|status|restart}"
+        exit 1
+        ;;
+esac
