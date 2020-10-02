@@ -1,0 +1,2 @@
+usr/local/bin/uiddd usr/bin
+usr/local/bin/uidd-cli usr/bin

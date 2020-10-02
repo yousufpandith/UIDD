@@ -1,0 +1,12 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Uidd
+Comment=Uidd P2P Cryptocurrency
+Comment[fr]=Uidd, monnaie virtuelle cryptographique pair à pair
+Comment[tr]=Uidd, eşten eşe kriptografik sanal para birimi
+Exec=uidd-qt %u
+Terminal=false
+Type=Application
+Icon=uidd128
+MimeType=x-scheme-handler/uidd;
+Categories=Office;Finance;
