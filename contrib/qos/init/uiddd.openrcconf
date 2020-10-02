@@ -1,0 +1,26 @@
+# /etc/conf.d/uiddd: config file for /etc/init.d/uiddd
+
+# Config file location
+#BITCOIND_CONFIGFILE="/etc/uidd/uidd.conf"
+
+# What directory to write pidfile to?  (created and owned by $BITCOIND_USER)
+#BITCOIND_PIDDIR="/var/run/uiddd"
+
+# What filename to give the pidfile
+#BITCOIND_PIDFILE="${BITCOIND_PIDDIR}/uiddd.pid"
+
+# Where to write uiddd data (be mindful that the blockchain is large)
+#BITCOIND_DATADIR="/var/lib/uiddd"
+
+# User and group to own uiddd process
+#BITCOIND_USER="uidd"
+#BITCOIND_GROUP="uidd"
+
+# Path to uiddd executable
+#BITCOIND_BIN="/usr/bin/uiddd"
+
+# Nice value to run uiddd under
+#BITCOIND_NICE=0
+
+# Additional options (avoid -conf and -datadir, use flags above)
+BITCOIND_OPTS=""
