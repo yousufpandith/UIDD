@@ -7,7 +7,7 @@ architectures:
 packages:
 - "faketime"
 remotes:
-- "url": "https://github.com/UIDD/gitian.sigs.git"
+- "url": "https://github.com/BITC2/gitian.sigs.git"
   "dir": "signature"
 files:
 - "uidd-osx-unsigned.tar.gz"

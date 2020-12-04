@@ -268,9 +268,6 @@ public:
 
     uint256 getuint256() const
     {
-		if (bitSize() > 256) {
-			throw std::range_error("cannot convert to uint256, bignum longer than 256 bits");
-		}
         unsigned int nSize = BN_bn2mpi(this, NULL);
         if (nSize < 4)
             return 0;

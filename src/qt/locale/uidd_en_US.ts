@@ -66,8 +66,8 @@
         <translation>These are your Uidd addresses for sending payments. Always check the amount and the receiving address before sending coins.</translation>
     </message>
     <message>
-        <source>These are your Uidd addresses for receiving payments. Includes watch-only addresses. It is recommended to use a new receiving address for each transaction.</source>
-        <translation>These are your Uidd addresses for receiving payments. Includes watch-only addresses. It is recommended to use a new receiving address for each transaction.</translation>
+        <source>These are your Uidd addresses for receiving payments. It is recommended to use a new receiving address for each transaction.</source>
+        <translation>These are your Uidd addresses for receiving payments. It is recommended to use a new receiving address for each transaction.</translation>
     </message>
     <message>
         <source>&amp;Copy Address</source>
@@ -2862,6 +2862,14 @@ https://www.transifex.com/uidd-project/uidd-project-translations</translation>
     <message>
         <source>Recommended</source>
         <translation>Recommended</translation>
+    </message>
+    <message>
+        <source>Send as zero-fee transaction if possible</source>
+        <translation>Send as zero-fee transaction if possible</translation>
+    </message>
+    <message>
+        <source>(confirmation may take longer)</source>
+        <translation>(confirmation may take longer)</translation>
     </message>
     <message>
         <source>Confirm the send action</source>

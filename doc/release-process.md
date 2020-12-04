@@ -23,9 +23,9 @@ If you're using the automated script (found in [contrib/gitian-build.sh](/contri
 Check out the source code in the following directory hierarchy.
 
     cd /path/to/your/toplevel/build
-    git clone https://github.com/UIDD/gitian.sigs.git
+    git clone https://github.com/BITC2/gitian.sigs.git
     git clone https://github.com/devrandom/gitian-builder.git
-    git clone https://github.com/UIDD/uidd.git
+    git clone https://github.com/BITC2/uidd.git
 
 ### Uidd maintainers/release engineers, suggestion for writing release notes
 
@@ -258,6 +258,6 @@ Note: check that SHA256SUMS itself doesn't end up in SHA256SUMS, which is a spur
 
   - Archive release notes for the new version to `doc/release-notes/` (branch `master` and branch of the release)
 
-  - Create a [new GitHub release](https://github.com/UIDD/uidd/releases/new) with a link to the archived release notes.
+  - Create a [new GitHub release](https://github.com/BITC2/uidd/releases/new) with a link to the archived release notes.
 
   - Celebrate
