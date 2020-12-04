@@ -85,7 +85,7 @@
     </message>
     <message>
         <location line="+4"/>
-        <source>These are your Uidd addresses for receiving payments. Includes watch-only addresses. It is recommended to use a new receiving address for each transaction.</source>
+        <source>These are your Uidd addresses for receiving payments. It is recommended to use a new receiving address for each transaction.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -4549,6 +4549,16 @@ Either mint higher denominations (so fewer inputs are needed) or reduce the amou
         <location line="+28"/>
         <source>Recommended</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location line="+73"/>
+        <source>Send as zero-fee transaction if possible</source>
+        <translation>Send as zero-fee transaction if possible</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>(confirmation may take longer)</source>
+        <translation>(confirmation may take longer)</translation>
     </message>
     <message>
         <location line="+67"/>

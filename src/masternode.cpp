@@ -1,6 +1,6 @@
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The PIVX developers
-// Copyright (c) 2017-2018 The Uidd developers
+// Copyright (c) 2020 The UIDD developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -220,7 +220,7 @@ void CMasternode::Check(bool forceCheck)
             TRY_LOCK(cs_main, lockMain);
             if (!lockMain) return;
 
-            if (!AcceptableInputs(mempool, state, CTransaction(tx), NULL)) {
+            if (!AcceptableInputs(mempool, state, CTransaction(tx), false, NULL)) {
                 activeState = MASTERNODE_VIN_SPENT;
                 return;
             }
@@ -472,22 +472,10 @@ bool CMasternodeBroadcast::CheckDefaultPort(std::string strService, std::string&
     return true;
 }
 
-int CMasternode::GetMasternodeInputAge()
-{
-	if (chainActive.Tip() == NULL) return 0;
-
-	if (cacheInputAge == 0) {
-		cacheInputAge = GetInputAge(vin);
-		cacheInputAgeBlock = chainActive.Tip()->nHeight;
-	}
-
-	return cacheInputAge + (chainActive.Tip()->nHeight - cacheInputAgeBlock);
-}
-
 bool CMasternodeBroadcast::CheckAndUpdate(int& nDos)
 {
     // make sure signature isn't in the future (past is OK)
-    if (sigTime > GetAdjustedTime() + 60 * 5) {
+    if (sigTime > GetAdjustedTime() + 60 * 60) {
         LogPrint("masternode","mnb - Signature rejected, too far into the future %s\n", vin.prevout.hash.ToString());
         nDos = 1;
         return false;
@@ -540,19 +528,19 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos)
     //search existing Masternode list, this is where we update existing Masternodes with new mnb broadcasts
     CMasternode* pmn = mnodeman.Find(vin);
 
-	// no such masternode, nothing to update
-	if (pmn == NULL) return true;
-
-	// this broadcast is older or equal than the one that we already have - it's bad and should never happen
-	// unless someone is doing something fishy
-	// (mapSeenMasternodeBroadcast in CMasternodeMan::ProcessMessage should filter legit duplicates)
-	if (pmn->sigTime >= sigTime) {
-		return error("CMasternodeBroadcast::CheckAndUpdate - Bad sigTime %d for Masternode %20s %105s (existing broadcast is at %d)",
-			sigTime, addr.ToString(), vin.ToString(), pmn->sigTime);
-	}
-
-	// masternode is not enabled yet/already, nothing to update
-	if (!pmn->IsEnabled()) return true;
+    // no such masternode, nothing to update
+    if (pmn == NULL)
+        return true;
+    else {
+        // this broadcast older than we have, it's bad.
+        if (pmn->sigTime > sigTime) {
+            LogPrint("masternode","mnb - Bad sigTime %d for Masternode %s (existing broadcast is at %d)\n",
+                sigTime, vin.prevout.hash.ToString(), pmn->sigTime);
+            return false;
+        }
+        // masternode is not enabled yet/already, nothing to update
+        if (!pmn->IsEnabled()) return true;
+    }
 
     // mn.pubkey = pubkey, IsVinAssociatedWithPubkey is validated once below,
     //   after that they just need to match
@@ -602,7 +590,7 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS)
             return false;
         }
 
-        if (!AcceptableInputs(mempool, state, CTransaction(tx), NULL)) {
+        if (!AcceptableInputs(mempool, state, CTransaction(tx), false, NULL)) {
             //set nDos
             state.IsInvalid(nDoS);
             return false;
@@ -640,7 +628,7 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS)
     mnodeman.Add(mn);
 
     // if it matches our Masternode privkey, then we've been remotely activated
-    if (pubKeyMasternode == activeMasternode.pubKeyMasternode && protocolVersion >= PROTOCOL_VERSION) {
+    if (pubKeyMasternode == activeMasternode.pubKeyMasternode && protocolVersion == PROTOCOL_VERSION) {
         activeMasternode.EnableHotColdMasterNode(vin, addr);
     }
 

@@ -28,19 +28,16 @@ using namespace std;
 QString TransactionDesc::FormatTxStatus(const CWalletTx& wtx)
 {
     AssertLockHeld(cs_main);
-    if (!IsFinalTx(wtx, chainActive.Height() + 1))
-	{
+    if (!IsFinalTx(wtx, chainActive.Height() + 1)) {
         if (wtx.nLockTime < LOCKTIME_THRESHOLD)
             return tr("Open for %n more block(s)", "", wtx.nLockTime - chainActive.Height());
         else
             return tr("Open until %1").arg(GUIUtil::dateTimeStr(wtx.nLockTime));
-    }
-	else
-	{
+    } else {
         int signatures = wtx.GetTransactionLockSignatures();
+        QString strUsingIX = "";
         if (signatures >= 0) {
-            if (signatures >= SWIFTTX_SIGNATURES_REQUIRED)
-			{
+            if (signatures >= SWIFTTX_SIGNATURES_REQUIRED) {
                 int nDepth = wtx.GetDepthInMainChain();
                 if (nDepth < 0)
                     return tr("conflicted");
@@ -50,11 +47,8 @@ QString TransactionDesc::FormatTxStatus(const CWalletTx& wtx)
                     return tr("%1/confirmed (verified via SwiftX)").arg(nDepth);
                 else
                     return tr("%1 confirmations (verified via SwiftX)").arg(nDepth);
-            }
-			else
-			{
-                if (!wtx.IsTransactionLockTimedOut())
-				{
+            } else {
+                if (!wtx.IsTransactionLockTimedOut()) {
                     int nDepth = wtx.GetDepthInMainChain();
                     if (nDepth < 0)
                         return tr("conflicted");
@@ -64,9 +58,7 @@ QString TransactionDesc::FormatTxStatus(const CWalletTx& wtx)
                         return tr("%1/confirmed (SwiftX verification in progress - %2 of %3 signatures )").arg(nDepth).arg(signatures).arg(SWIFTTX_SIGNATURES_TOTAL);
                     else
                         return tr("%1 confirmations (SwiftX verification in progress - %2 of %3 signatures)").arg(nDepth).arg(signatures).arg(SWIFTTX_SIGNATURES_TOTAL);
-                }
-				else
-				{
+                } else {
                     int nDepth = wtx.GetDepthInMainChain();
                     if (nDepth < 0)
                         return tr("conflicted");
@@ -78,9 +70,7 @@ QString TransactionDesc::FormatTxStatus(const CWalletTx& wtx)
                         return tr("%1 confirmations").arg(nDepth);
                 }
             }
-        }
-		else
-		{
+        } else {
             int nDepth = wtx.GetDepthInMainChain();
             if (nDepth < 0)
                 return tr("conflicted");

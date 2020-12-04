@@ -253,7 +253,17 @@ public:
         return activeState == MASTERNODE_ENABLED;
     }
 
-	int GetMasternodeInputAge();
+    int GetMasternodeInputAge()
+    {
+        if (chainActive.Tip() == NULL) return 0;
+
+        if (cacheInputAge == 0) {
+            cacheInputAge = GetInputAge(vin);
+            cacheInputAgeBlock = chainActive.Tip()->nHeight;
+        }
+
+        return cacheInputAge + (chainActive.Tip()->nHeight - cacheInputAgeBlock);
+    }
 
     std::string GetStatus();
 

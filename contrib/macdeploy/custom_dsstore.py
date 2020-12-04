@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2013-2018 The Bitcoin Core developers
+# Copyright (c) 2013-2016 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 from __future__ import division,print_function,unicode_literals
@@ -14,7 +14,7 @@ package_name_ns = sys.argv[2]
 ds = DSStore.open(output_file, 'w+')
 ds['.']['bwsp'] = {
     'ShowStatusBar': False,
-    'WindowBounds': '{{300, 280}, {500, 343}}',
+    'WindowBounds': b'{{300, 280}, {500, 343}}',
     'ContainerShowSidebar': False,
     'SidebarWidth': 0,
     'ShowTabView': False,
@@ -45,8 +45,8 @@ alias = Alias.from_bytes(icvp['backgroundImageAlias'])
 alias.volume.name = package_name_ns
 alias.volume.posix_path = '/Volumes/' + package_name_ns
 alias.volume.disk_image_alias.target.filename = package_name_ns + '.temp.dmg'
-alias.volume.disk_image_alias.target.carbon_path = 'Macintosh HD:Users:\x00uidduser:\x00Documents:\x00uidd:\x00uidd:\x00' + package_name_ns + '.temp.dmg'
-alias.volume.disk_image_alias.target.posix_path = 'Users/uidduser/Documents/uidd/uidd/' + package_name_ns + '.temp.dmg'
+alias.volume.disk_image_alias.target.carbon_path = 'Macintosh HD:Users:\x00bitcoinuser:\x00Documents:\x00bitcoin:\x00bitcoin:\x00' + package_name_ns + '.temp.dmg'
+alias.volume.disk_image_alias.target.posix_path = 'Users/bitcoinuser/Documents/bitcoin/bitcoin/' + package_name_ns + '.temp.dmg'
 alias.target.carbon_path = package_name_ns + ':.background:\x00background.tiff'
 icvp['backgroundImageAlias'] = biplist.Data(alias.to_bytes())
 ds['.']['icvp'] = icvp
@@ -54,7 +54,7 @@ ds['.']['icvp'] = icvp
 ds['.']['vSrn'] = ('long', 1)
 
 ds['Applications']['Iloc'] = (370, 156)
-ds['Uidd.app']['Iloc'] = (128, 156)
+ds['PIVX-Qt.app']['Iloc'] = (128, 156)
 
 ds.flush()
 ds.close()

@@ -1,7 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2015-2017 The PIVX developers
-// Copyright (c) 2017-2019 The Uidd developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -14,15 +13,11 @@
 #include "uint256.h"
 #include "util.h"
 #include "libzerocoin/Denominations.h"
+
 #include <vector>
 
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
-
-// Mini version of spork.h:
-int64_t GetSporkValue(int nSporkID);
-#define SPORK_13_STAKING_PROTOCOL_2 10012
-//
 
 struct CDiskBlockPos {
     int nFile;
@@ -164,11 +159,8 @@ public:
 
     // proof-of-stake specific fields
     uint256 GetBlockTrust() const;
-	// hash modifier for proof-of-stake
-    uint64_t nStakeModifier;
-	uint256 nStakeModifierV2;
-
-    //unsigned int nStakeModifierChecksum; // checksum of index; in-memory only
+    uint64_t nStakeModifier;             // hash modifier for proof-of-stake
+    unsigned int nStakeModifierChecksum; // checksum of index; in-memeory only
     COutPoint prevoutStake;
     unsigned int nStakeTime;
     uint256 hashProofOfStake;
@@ -209,8 +201,7 @@ public:
         nMoneySupply = 0;
         nFlags = 0;
         nStakeModifier = 0;
-		nStakeModifierV2 = uint256();
-        //nStakeModifierChecksum = 0;
+        nStakeModifierChecksum = 0;
         prevoutStake.SetNull();
         nStakeTime = 0;
 
@@ -250,8 +241,7 @@ public:
         nMoneySupply = 0;
         nFlags = 0;
         nStakeModifier = 0;
-		nStakeModifierV2 = uint256();
-        //nStakeModifierChecksum = 0;
+        nStakeModifierChecksum = 0;
         hashProofOfStake = uint256();
 
         if (block.IsProofOfStake()) {
@@ -469,7 +459,6 @@ public:
         READWRITE(nMoneySupply);
         READWRITE(nFlags);
         READWRITE(nStakeModifier);
-		if (nHeight >= GetSporkValue(SPORK_13_STAKING_PROTOCOL_2)) READWRITE(nStakeModifierV2);
         if (IsProofOfStake()) {
             READWRITE(prevoutStake);
             READWRITE(nStakeTime);

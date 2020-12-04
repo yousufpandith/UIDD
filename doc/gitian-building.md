@@ -3,8 +3,6 @@ Gitian building
 
 *Setup instructions for a gitian build of Uidd using a Debian VM or physical system.*
 
-This guide cannot be used as is to build v.2.2 or newer. Please see updated documentation parts from upstream: <https://github.com/bitcoin-core/docs/blob/master/gitian-building.md>
-
 Gitian is the deterministic build process that is used to build the Uidd
 Core executables. It provides a way to be reasonably sure that the
 executables are really built from source on GitHub. It also makes sure that
@@ -12,7 +10,8 @@ the same, tested dependencies are used and statically built into the executable.
 
 Multiple developers build the source code by following a specific descriptor
 ("recipe"), cryptographically sign the result, and upload the resulting signature.
-These results are compared and only if they match, the build is accepted and uploaded.
+These results are compared and only if they match, the build is accepted and uploaded
+to uidd-crypto.com.
 
 More independent gitian builders are needed, which is why I wrote this
 guide. It is preferred to follow these steps yourself instead of using someone else's
@@ -282,7 +281,7 @@ Clone the git repositories for uidd and gitian and then checkout the uidd versio
 
 ```bash
 git clone https://github.com/devrandom/gitian-builder.git
-git clone https://github.com/UIDD/uidd.git
+git clone https://github.com/BITC2/uidd.git
 cd uidd
 git checkout v${VERSION}
 cd ..

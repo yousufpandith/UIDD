@@ -1,6 +1,5 @@
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The PIVX developers
-// Copyright (c) 2017-2019 The Uidd developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -33,24 +32,18 @@ bool CMasternodeSync::IsSynced()
 bool CMasternodeSync::IsBlockchainSynced()
 {
     static int64_t timenow = GetTime();
-	
-	if (fImporting || fReindex)
-	{
-		LogPrint("masternode", "CMasternodeSync::IsBlockchainSynced() false. - fImporting or fReindex is true.\n");
-		return false;
-	}
 
-	LOCK(cs_main);
+    if (fImporting || fReindex) return false;
+
+    TRY_LOCK(cs_main, lockMain);
+    if (!lockMain) return false;
 
     CBlockIndex* pindex = chainActive.Tip();
     if (pindex == NULL) return false;
 
 	// If last block received 1+ hour ago then consider us not synced.
     if (pindex->nTime + 60 * 60 < timenow && ((pindex->nHeight != 1390 && pindex->nHeight != 1391) || timenow > 1522368000)) 
-	{
-		LogPrint("masternode", "CMasternodeSync::IsBlockchainSynced() false. last block received 1+ hour ago.\n");
-		return false;
-	}
+        return false;
 
     return true;
 }
@@ -290,13 +283,12 @@ void CMasternodeSync::Process()
 
         //set to synced
         if (RequestedMasternodeAssets == MASTERNODE_SYNC_SPORKS) {
-			
+			RequestedMasternodeAttempt++; // TODO: Once there's lots of peers, move this line to right before the next return; 
             if (pnode->HasFulfilledRequest("getspork")) continue;
             pnode->FulfilledRequest("getspork");
 
             pnode->PushMessage("getsporks"); //get current network sporks
-            if (RequestedMasternodeAttempt > 1) GetNextAsset();
-			RequestedMasternodeAttempt++;
+            if (RequestedMasternodeAttempt > 0) GetNextAsset();
             return;
         }
 
@@ -304,7 +296,7 @@ void CMasternodeSync::Process()
 		{
             if (RequestedMasternodeAssets == MASTERNODE_SYNC_LIST)
 			{
-				
+				RequestedMasternodeAttempt++; // TODO: Once there's lots of peers, move this line to right before the next unconditional return; 
                 LogPrint("masternode", "CMasternodeSync::Process() - lastMasternodeList %lld (GetTime()) %lld\n", lastMasternodeList, GetTime());
                 if (lastMasternodeList > 0 && lastMasternodeList < GetTime() - MASTERNODE_SYNC_TIMEOUT * 2 && RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD) { //hasn't received a new item in the last 10 seconds, so we'll move to the
                     GetNextAsset();
@@ -333,20 +325,16 @@ void CMasternodeSync::Process()
 
 				LogPrint("masternode", "MASTERNODE_SYNC_LIST - mnodeman.DsegUpdate(pnode);\n");
                 mnodeman.DsegUpdate(pnode);
-				RequestedMasternodeAttempt++;
                 return;
             }
 
             if (RequestedMasternodeAssets == MASTERNODE_SYNC_MNW)
 			{
-				
+				RequestedMasternodeAttempt++; // TODO: Once there's lots of peers, move this line to right before the next unconditional return; 
                 if (lastMasternodeWinner > 0 && lastMasternodeWinner < GetTime() - MASTERNODE_SYNC_TIMEOUT * 2 && RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD) { //hasn't received a new item in the last five seconds, so we'll move to the
                     GetNextAsset();
                     return;
                 }
-
-				if (pnode->HasFulfilledRequest("mnwsync")) continue;
-				pnode->FulfilledRequest("mnwsync");
 
                 // timeout
                 if (lastMasternodeWinner == 0 &&
@@ -365,6 +353,9 @@ void CMasternodeSync::Process()
                     return;
                 }
 
+				if (pnode->HasFulfilledRequest("mnwsync")) continue;
+				pnode->FulfilledRequest("mnwsync");
+
                 if (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3) return;
 
                 CBlockIndex* pindexPrev = chainActive.Tip();
@@ -373,7 +364,6 @@ void CMasternodeSync::Process()
                 int nMnCount = mnodeman.CountEnabled();
                 pnode->PushMessage("mnget", nMnCount); //sync payees
 
-				RequestedMasternodeAttempt++;
                 return;
             }
         }
@@ -385,6 +375,40 @@ void CMasternodeSync::Process()
 				GetNextAsset();
 				activeMasternode.ManageStatus();
 				return;
+
+				// PIVX:
+                
+                // We'll start rejecting votes if we accidentally get set as synced too soon
+                /*if (lastBudgetItem > 0 && lastBudgetItem < GetTime() - MASTERNODE_SYNC_TIMEOUT * 2 && RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD) { 
+                    
+                    // Hasn't received a new item in the last five seconds, so we'll move to the
+                    GetNextAsset();
+
+                    // Try to activate our masternode if possible
+                    activeMasternode.ManageStatus();
+
+                    return;
+                }
+
+                // timeout
+                if (lastBudgetItem == 0 &&
+                    (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3 || GetTime() - nAssetSyncStarted > MASTERNODE_SYNC_TIMEOUT * 5)) {
+                    // maybe there is no budgets at all, so just finish syncing
+                    GetNextAsset();
+                    activeMasternode.ManageStatus();
+                    return;
+                }
+
+                if (pnode->HasFulfilledRequest("busync")) continue;
+                pnode->FulfilledRequest("busync");
+
+                if (RequestedMasternodeAttempt >= MASTERNODE_SYNC_THRESHOLD * 3) return;
+
+                uint256 n = 0;
+                pnode->PushMessage("mnvs", n); //sync masternode votes
+                RequestedMasternodeAttempt++;
+
+                return;*/
             }
         }
     }
