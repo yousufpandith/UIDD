@@ -223,25 +223,42 @@ bool CBlock::CheckBlockSignature() const
     if (IsProofOfWork())
         return vchBlockSig.empty();
 
-	CPubKey pubkey;
-	txnouttype whichType;
-	std::vector<valtype> vSolutions;
-	const CTxOut& txout = vtx[1].vout[1];
+    std::vector<valtype> vSolutions;
+    txnouttype whichType;
 
-	if (!Solver(txout.scriptPubKey, whichType, vSolutions))
-		return false;
+    const CTxOut& txout = vtx[1].vout[1];
 
-	if (whichType == TX_PUBKEY || whichType == TX_PUBKEYHASH) {
-		valtype& vchPubKey = vSolutions[0];
-		pubkey = CPubKey(vchPubKey);
-	}
-	else return false;
+    if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+        return false;
 
-	if (!pubkey.IsValid())
-		return error("%s: invalid pubkey %s", __func__, HexStr(pubkey));
+    if (whichType == TX_PUBKEY)
+    {
+        valtype& vchPubKey = vSolutions[0];
+        CPubKey pubkey(vchPubKey);
+        if (!pubkey.IsValid())
+          return false;
 
-	if (vchBlockSig.empty())
-		return error("%s: vchBlockSig is empty!", __func__);
+        if (vchBlockSig.empty())
+            return false;
 
-	return pubkey.Verify(GetHash(), vchBlockSig);
+        return pubkey.Verify(GetHash(), vchBlockSig);
+    }
+    else if(whichType == TX_PUBKEYHASH)
+    {
+        valtype& vchPubKey = vSolutions[0];
+        CKeyID keyID;
+        keyID = CKeyID(uint160(vchPubKey));
+        CPubKey pubkey(vchPubKey);
+
+        if (!pubkey.IsValid())
+          return false;
+
+        if (vchBlockSig.empty())
+            return false;
+
+        return pubkey.Verify(GetHash(), vchBlockSig);
+
+    }
+
+    return false;
 }

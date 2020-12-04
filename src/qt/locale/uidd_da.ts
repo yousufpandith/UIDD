@@ -2769,6 +2769,14 @@ https://www.transifex.com/uidd-project/uidd-project-translations</translation>
         <translation>Anbefalet</translation>
     </message>
     <message>
+        <source>Send as zero-fee transaction if possible</source>
+        <translation>send som nul-gebyrstransaktion hvis muligt</translation>
+    </message>
+    <message>
+        <source>(confirmation may take longer)</source>
+        <translation>(bekræftelse kan tage længere tid)</translation>
+    </message>
+    <message>
         <source>Confirm the send action</source>
         <translation>Bekræft  og send</translation>
     </message>

@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin developers
-// Copyright (c) 2017-2018 The Uidd developers
+// Copyright (c) 2020 The UIDD developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -47,42 +47,45 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 		return bnNew.GetCompact();
 	}
 	/////////////
-	
-	if (pindexLast->nHeight + 1 == GetSporkValue(SPORK_13_STAKING_PROTOCOL_2)) nActualTimespan = 2000; // Reduce difficulty for a smoother transition to new staking protocol.
+
+	int nHeightFirst = pindexLast->nHeight - 10;
+	if (nHeightFirst <= Params().LAST_POW_BLOCK())
+	{
+		// Re-target every block.
+		nActualTimespan = pindexLast->GetBlockTime() - pindexLast->pprev->GetBlockTime();
+	}
 	else
 	{
-		int nHeightFirst = pindexLast->nHeight - 10;
-
 		// Re-target every 10 blocks.
 		if (pindexLast->nHeight % 10 != 1) return pindexLast->nBits;
-
+		
 		CBlockIndex* pindexFirst = pindexLast->pprev;
 		while (pindexFirst->nHeight > nHeightFirst) {
 			pindexFirst = pindexFirst->pprev;
 		}
 		assert(pindexFirst);
-
 		nActualTimespan = pindexLast->GetBlockTime() - pindexFirst->GetBlockTime();
 
 		nActualTimespan /= 10;
-
-		// Limit adjustment step
-	
-		if (nActualTimespan < 30) nActualTimespan = 30;
-		else if (nActualTimespan > 120) nActualTimespan = 120;
 	}
 
+	// Limit adjustment step
+	if (nActualTimespan < 30) nActualTimespan = 30;
+	else if (nActualTimespan > 120) nActualTimespan = 120;
+	
 	// Retarget
 	uint256 bnNew;
 	
 	bnNew.SetCompact(pindexLast->nBits);
-	
+
 	if (bnNew == Params().ProofOfWorkLimit() && nActualTimespan >= nTargetSpacing) return bnNew.GetCompact();
 	
 	bnNew /= nTargetSpacing;
 	bnNew *= nActualTimespan;
 
 	if (bnNew > Params().ProofOfWorkLimit()) bnNew = Params().ProofOfWorkLimit();
+	//if (pindexLast->nHeight < Params().LAST_POW_BLOCK() + 2 && bnNew.GetCompact() > 469827583U) bnNew = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"); // PoS Starting difficulty can't be too low.
+
 
 	LogPrintf("difficulty: %u\n", bnNew.GetCompact());
 

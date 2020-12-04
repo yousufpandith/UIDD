@@ -1,6 +1,6 @@
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The PIVX developers
-// Copyright (c) 2017-2018 The Uidd developers
+// Copyright (c) 2020 The UIDD developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -613,7 +613,7 @@ int CMasternodeMan::GetMasternodeRank(const CTxIn& vin, int64_t nBlockHeight, in
             nMasternode_Age = GetAdjustedTime() - mn.sigTime;
             if ((nMasternode_Age) < nMasternode_Min_Age) {
                 if (fDebug) LogPrint("masternode","Skipping just activated Masternode. Age: %ld\n", nMasternode_Age);
-                continue;                                                   // Skip masternodes younger than (default) 8000 secs
+                continue;                                                   // Skip masternodes younger than (default) 1 hour
             }
         }
         if (fOnlyActive) {
@@ -996,7 +996,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         {
             TRY_LOCK(cs_main, lockMain);
             if (!lockMain) return;
-            fAcceptable = AcceptableInputs(mempool, state, CTransaction(tx), NULL);
+            fAcceptable = AcceptableInputs(mempool, state, CTransaction(tx), false, NULL);
         }
 
         if (fAcceptable) {

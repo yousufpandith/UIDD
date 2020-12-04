@@ -2809,6 +2809,14 @@ https://www.transifex.com/uidd-project/uidd-project-translations</translation>
         <translation>Recomendada</translation>
     </message>
     <message>
+        <source>Send as zero-fee transaction if possible</source>
+        <translation>Enviar como transacción sin comisiones si es posible</translation>
+    </message>
+    <message>
+        <source>(confirmation may take longer)</source>
+        <translation>(la primera confirmación puede tardar más)</translation>
+    </message>
+    <message>
         <source>Confirm the send action</source>
         <translation>Confirmar la acción de enviar</translation>
     </message>
