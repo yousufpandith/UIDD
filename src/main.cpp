@@ -2,7 +2,7 @@
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The PIVX developers
-// Copyright (c) 2020 The UIDD developers
+// Copyright (c) 2021 The Uidd developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -2094,7 +2094,7 @@ int64_t GetBlockValue(int nHeight)
 	}
 	else nSubsidy = 0;
 
-		
+	
 
     return nSubsidy;
 }
