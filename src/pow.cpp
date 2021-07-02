@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin developers
-// Copyright (c) 2020 The UIDD developers
+// Copyright (c) 2021 The Uidd developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -26,8 +26,8 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 	int64_t nTargetSpacing = 60;
 	int64_t nActualTimespan;
 
-	////////// Old, version 2.0.0
-	if (pindexLast->nHeight < 6538) // CheckWork() will pass Block 6538 and earlier to this old version.
+	////////// Old
+	if (pindexLast->nHeight < 12167) //.
 	{
 		nActualTimespan = pindexLast->GetBlockTime() - pindexLast->pprev->GetBlockTime();
 		if (nActualTimespan < 30) nActualTimespan = 30;

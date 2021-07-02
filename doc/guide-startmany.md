@@ -137,7 +137,7 @@ I usually confirm that remote is on the correct block by issuing:
 
 ```uiddd getinfo```
 
-And compare with a Uidd blockchain explorer.
+And compare with a bitcoin 2 blockchain explorer.
 
 ### Local
 

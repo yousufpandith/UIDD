@@ -49,8 +49,8 @@ static bool AppInitRawTx(int argc, char* argv[])
         // First part of help message is specific to this utility
         std::string strUsage = _("Uidd Core uidd-tx utility version") + " " + FormatFullVersion() + "\n\n" +
                                _("Usage:") + "\n" +
-                               "  uidd-tx [options] <hex-tx> [commands]  " + _("Update hex-encoded Uidd transaction") + "\n" +
-                               "  uidd-tx [options] -create [commands]   " + _("Create hex-encoded Uidd transaction") + "\n" +
+                               "  uidd-tx [options] <hex-tx> [commands]  " + _("Update hex-encoded bitcoin 2 transaction") + "\n" +
+                               "  uidd-tx [options] -create [commands]   " + _("Create hex-encoded bitcoin 2 transaction") + "\n" +
                                "\n";
 
         fprintf(stdout, "%s", strUsage.c_str());

@@ -19,7 +19,7 @@
 
 /* Minimum free space (in bytes) needed for data directory */
 static const uint64_t GB_BYTES = 1000000000LL;
-static const uint64_t BLOCK_CHAIN_SIZE = 1400000000LL;
+static const uint64_t BLOCK_CHAIN_SIZE = 400000000LL;
 
 /* Check free space asynchronously to prevent hanging the UI thread.
 
@@ -109,7 +109,7 @@ Intro::Intro(QWidget* parent) : QDialog(parent),
                                 signalled(false)
 {
     ui->setupUi(this);
-    ui->sizeWarningLabel->setText(ui->sizeWarningLabel->text().arg(BLOCK_CHAIN_SIZE / GB_BYTES));
+    //ui->sizeWarningLabel->setText(ui->sizeWarningLabel->text().arg(BLOCK_CHAIN_SIZE / GB_BYTES));
     startThread();
 }
 

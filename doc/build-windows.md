@@ -145,7 +145,7 @@ The next three steps are an example of how to acquire the source in an appropria
 
 ```
 cd /usr/src
-sudo git clone https://github.com/UIDD/uidd.git
+sudo git clone https://github.com/BITC/uidd.git
 sudo chmod -R a+rw uidd
 
 ```

@@ -56,17 +56,12 @@ static void convertSeed6(std::vector<CAddress>& vSeedsOut, const SeedSpec6* data
 //    timestamp before)
 // + Contains no strange transactions
 static Checkpoints::MapCheckpoints mapCheckpoints =
-	boost::assign::map_list_of(0, uint256("0a94e812e39377fc8e1ee9d0db4711db693dd1aa90b7cc251f5b587e2a5d5923"))
-                (105, uint256("116ac21df5908920b588080d7851e8823e82a820e763a17c9628b38f5689e3c2"))
-                (256, uint256("7b3d17ea18f5498812050ae3fc92e7980e9253c8db28e78b5f337bfb6c8e8dde"))
-                (786, uint256("6be22eb836b4e41343a3a8af164fec45a054f82f58bc56846542c4b60e885492"))
-                (2560, uint256("693f311076ad61b054210ebbe632e4034c5b0077831ee75aa305fd26bca478eb"))
-                (8800, uint256("453d9a871a14c3b8c28bcd253b70e03fbfadcd810c5b7672882967cb09728a9f"));
+	boost::assign::map_list_of(0, uint256("0a94e812e39377fc8e1ee9d0db4711db693dd1aa90b7cc251f5b587e2a5d5923"));
 
 static const Checkpoints::CCheckpointData data = {
     &mapCheckpoints,
-	1581144591, // * UNIX timestamp of last checkpoint block. obtained by: date +%s.
-	18364,    // * total number of transactions between genesis and last checkpoint
+	1596611015, // * UNIX timestamp of last checkpoint block. obtained by: date +%s.
+	0,    // * total number of transactions between genesis and last checkpoint
                 //   (the tx=... number in the UpdateTip: debug.log lines)
 	1440        // * estimated number of transactions per day after checkpoint. 2 transactions per minute = 2880
 };
@@ -116,7 +111,7 @@ public:
         pchMessageStart[2] = 241;
         pchMessageStart[3] = 247;
         vAlertPubKey = ParseHex("043893c78d2431a162624c11ebe310073c279a7cdff65e817349ba015a95fcd29c8cff661f7ddfcaa4c9aa2c614bd2753eb08be56c21633aa1ee7df7aa1fdfec36"); // UIDD
-        nDefaultPort = 7860; // 44798 should be good. 7860 used by Bitcoin, Bitcoin Gold and Bitcoin Cash. 49144 used by UIDD before.
+        nDefaultPort = 7860; 
         bnProofOfWorkLimit = ~uint256(0) >> 1;
         nMaxReorganizationDepth = 100;
         nEnforceBlockUpgradeMajority = 750;
@@ -289,7 +284,7 @@ public:
         fTestnetToBeDeprecatedFieldRPC = true;
 
         nPoolMaxTransactions = 2;
-        strSporkKey = "043893c78d2431a162624c11ebe310073c279a7cdff65e817349ba015a95fcd29c8cff661f7ddfcaa4c9aa2c614bd2753eb08be56c21633aa1ee7df7aa1fdfec36";
+        strSporkKey = "04e39b9d811dd2d1e84ff4be5ca81dfa98411d6cf520b3d0394651f35721cf53ddbfdbbf40c768777aac98641e522536c5a86aacc21509658283877d2c73c9fde0";
         nStartMasternodePayments = 1519330596; 
     }
     const Checkpoints::CCheckpointData& Checkpoints() const

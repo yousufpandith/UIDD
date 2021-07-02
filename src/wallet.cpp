@@ -2,7 +2,7 @@
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The PIVX developers
-// Copyright (c) 2020 The UIDD developers
+// Copyright (c) 2021 The Uidd developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -652,6 +652,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet)
         if (fInsertedNew) {
             wtx.nTimeReceived = GetAdjustedTime();
             wtx.nOrderPos = IncOrderPosNext();
+			wtxOrdered.insert(make_pair(wtx.nOrderPos, TxPair(&wtx, (CAccountingEntry*)0)));
             wtx.nTimeSmart = ComputeTimeSmart(wtx);
             AddToSpends(hash);
         }
@@ -1338,8 +1339,12 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
         nFee = nDebit - nValueOut;
     }
 
+	//CAmount stakinginputamount = 0;
+	//std::string gaddress = "";
+
     // Sent/received.
-    for (unsigned int i = 0; i < vout.size(); ++i) {
+    for (unsigned int i = 0; i < vout.size(); ++i)
+	{
         const CTxOut& txout = vout[i];
         isminetype fIsMine = pwallet->IsMine(txout);
         // Only need to handle txouts if AT LEAST one of these is true:
@@ -1366,18 +1371,41 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
         COutputEntry output = {address, txout.nValue, (int)i};
 
         // If we are debited by the transaction, add the output as a "sent" entry
-        if (nDebit > 0)
-            listSent.push_back(output);
-
+		if (nDebit > 0)
+		{
+			listSent.push_back(output);
+			// Not needed: Staking reward record handling.
+			/*if (stakinginputamount == 0 && IsCoinStake() && output.amount != 0)
+			{
+				stakinginputamount = output.amount;
+				CBitcoinAddress tempaddr;
+				if(tempaddr.Set(address)) stakingaddress = tempaddr.ToString();
+			}*/
+		}
+            
         // If we are receiving the output, add it as a "received" entry
-        if (fIsMine & filter)
-            listReceived.push_back(output);
+		if (fIsMine & filter)
+		{
+			// Not needed: Staking reward record handling.
+			/*if (output.amount != 0 && nFee != 0 && stakinginputamount == output.amount && IsCoinStake())
+			{
+				CBitcoinAddress tempaddr;
+				if (tempaddr.Set(address) && stakingaddress == tempaddr.ToString())
+				{
+					output.amount += nFee - CENT * 20; // Staking reward minus masternode reward.
+					stakinginputamount = -1; // To ensure this won't be done again.
+				}
+			}*/
+			listReceived.push_back(output);
+		}
     }
 }
 
 void CWalletTx::GetAccountAmounts(const string& strAccount, CAmount& nReceived, CAmount& nSent, CAmount& nFee, const isminefilter& filter) const
 {
-    nReceived = nSent = nFee = 0;
+	nReceived = 0;
+	nSent = 0;
+	nFee = 0;
 
     CAmount allFee;
     string strSentAccount;
@@ -1385,21 +1413,28 @@ void CWalletTx::GetAccountAmounts(const string& strAccount, CAmount& nReceived, 
     list<COutputEntry> listSent;
     GetAmounts(listReceived, listSent, allFee, strSentAccount, filter);
 
-    if (strAccount == strSentAccount) {
-        BOOST_FOREACH (const COutputEntry& s, listSent)
-            nSent += s.amount;
-        nFee = allFee;
-    }
+	CBitcoinAddress addr;
+
+	BOOST_FOREACH(const COutputEntry& s, listSent)
+	{
+		if (strAccount == strSentAccount || (addr.Set(s.destination) && addr.ToString() == strAccount))
+		{
+			nSent += s.amount;
+			nFee = allFee;
+		}
+	}
+
     {
         LOCK(pwallet->cs_wallet);
-        BOOST_FOREACH (const COutputEntry& r, listReceived) {
-            if (pwallet->mapAddressBook.count(r.destination)) {
+        BOOST_FOREACH (const COutputEntry& r, listReceived)
+		{
+            if (pwallet->mapAddressBook.count(r.destination))
+			{
                 map<CTxDestination, CAddressBookData>::const_iterator mi = pwallet->mapAddressBook.find(r.destination);
                 if (mi != pwallet->mapAddressBook.end() && (*mi).second.name == strAccount)
                     nReceived += r.amount;
-            } else if (strAccount.empty()) {
-                nReceived += r.amount;
             }
+			else if (strAccount.empty()) nReceived += r.amount;
         }
     }
 }
@@ -1972,6 +2007,65 @@ void CWallet::AvailableCoins(vector<COutput>& vCoins, bool fOnlyConfirmed, const
     }
 }
 
+CAmount CWallet::GetSpendableCoinsOfAddress(CBitcoinAddress &theAddress, CCoinControl* ToCoinControl, int minConfirmations, CAmount StopAtAmount)
+{
+	CAmount TotalAmount = 0;
+	{
+		LOCK2(cs_main, cs_wallet);
+		for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it) {
+			const uint256& wtxid = it->first;
+			const CWalletTx* pcoin = &(*it).second;
+
+			if (!CheckFinalTx(*pcoin))
+				continue;
+
+			if ((pcoin->IsCoinBase() || pcoin->IsCoinStake()) && pcoin->GetBlocksToMaturity() > 0)
+				continue;
+
+			int nDepth = pcoin->GetDepthInMainChain(false);
+			if (nDepth < minConfirmations)
+				continue;
+
+			// We should not consider coins which aren't at least in our mempool
+			// It's possible for these to be conflicted via ancestors which we may never be able to detect
+			if (nDepth == 0 && !pcoin->InMempool())
+				continue;
+
+			for (unsigned int i = 0; i < pcoin->vout.size(); i++)
+			{
+				isminetype mine = IsMine(pcoin->vout[i]);
+				if (IsSpent(wtxid, i))
+					continue;
+				if (mine != ISMINE_SPENDABLE)
+					continue;
+
+				if (IsLockedCoin((*it).first, i) || pcoin->vout[i].nValue <= 0)
+					continue;
+
+				CTxDestination CTXaddress;
+				if (!ExtractDestination(pcoin->vout[i].scriptPubKey, CTXaddress))
+					continue;
+
+				CBitcoinAddress anAddress(CTXaddress);
+				if (anAddress.CompareTo(theAddress) != 0) continue; // the coins have to be of theAddress.
+
+				
+				if (ToCoinControl)
+				{
+					COutPoint outpt(pcoin->GetHash(), i);
+					ToCoinControl->Select(outpt);
+				}
+
+				TotalAmount += pcoin->vout[i].nValue;
+				if (TotalAmount >= StopAtAmount) break;
+			}
+
+			if (TotalAmount >= StopAtAmount) break;
+		}
+	}
+	return TotalAmount;
+}
+
 map<CBitcoinAddress, vector<COutput> > CWallet::AvailableCoinsByAddress(bool fConfirmed, CAmount maxCoinValue)
 {
     vector<COutput> vCoins;
@@ -2224,7 +2318,8 @@ bool CWallet::SelectCoins(const CAmount& nTargetValue, set<pair<const CWalletTx*
     AvailableCoins(vCoins, true, coinControl, false, coin_type, useIX);
 
     // coin control -> return all selected outputs (we want all selected to go into the transaction for sure)
-    if (coinControl && coinControl->HasSelected()) {
+    if (coinControl && coinControl->HasSelected())
+	{
         BOOST_FOREACH (const COutput& out, vCoins) {
             if (!out.fSpendable)
                 continue;
@@ -2595,15 +2690,16 @@ bool CWallet::ConvertList(std::vector<CTxIn> vCoins, std::vector<CAmount>& vecAm
 
 bool CWallet::CreateTransaction(const vector<pair<CScript, CAmount> >& vecSend,
     CWalletTx& wtxNew,
-    CReserveKey& reservekey,
+	CReserveKey& reservekey,
     CAmount& nFeeRet,
     std::string& strFailReason,
     const CCoinControl* coinControl,
     AvailableCoinsType coin_type,
     bool useIX,
-    CAmount nFeePay)
+    CAmount nFeePay,
+	std::string theChangeAddress)
 {
-    if (useIX && nFeePay < 10000) nFeePay = 10000;
+    if (useIX && nFeePay < (CAmount)50000) nFeePay = (CAmount)50000;
 
     CAmount nValue = 0;
 
@@ -2711,49 +2807,65 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, CAmount> >& vecSend,
                     wtxNew.mapValue["DS"] = "1";
                 }
 
-                if (nChange > 0) {
+                if (nChange > 0)
+				{
                     // Fill a vout to ourself
-                    // TODO: pass in scriptChange instead of reservekey so
-                    // change transaction isn't always pay-to-uidd-address
                     CScript scriptChange;
                     bool combineChange = false;
+					bool returnkeyregardless = false;
 
                     // coin control: send change to custom address
-                    if (coinControl && !boost::get<CNoDestination>(&coinControl->destChange)) {
+                    if (coinControl && !boost::get<CNoDestination>(&coinControl->destChange))
+					{
                         scriptChange = GetScriptForDestination(coinControl->destChange);
-
-                        vector<CTxOut>::iterator it = txNew.vout.begin();
-                        while (it != txNew.vout.end()) {
-                            if (scriptChange == it->scriptPubKey) {
-                                it->nValue += nChange;
-                                nChange = 0;
-                                reservekey.ReturnKey();
-                                combineChange = true;
-                                break;
-                            }
-                            ++it;
-                        }
+						returnkeyregardless = true;
                     }
+					// theChangeAddress set, so send change there.
+					else if (theChangeAddress != "")
+					{
+						CBitcoinAddress changeAddress(theChangeAddress);
+						if(changeAddress.IsValid())
+						{
+							scriptChange = GetScriptForDestination(changeAddress.Get());
+							returnkeyregardless = true;
+						}
+					}
 
-                    // no coin control: send change to newly generated address
-                    else {
-                        // Note: We use a new key here to keep it from being obvious which side is the change.
-                        //  The drawback is that by not reusing a previous key, the change may be lost if a
-                        //  backup is restored, if the backup doesn't have the new private key for the change.
-                        //  If we reused the old key, it would be possible to add code to look for and
-                        //  rediscover unknown transactions that were written with keys of ours to recover
-                        //  post-backup change.
+					if(returnkeyregardless) // Custom change address.
+					{
+						// Add the change to an existing output to that address if possible.
+						vector<CTxOut>::iterator it = txNew.vout.begin();
+						while (it != txNew.vout.end()) {
+							if (scriptChange == it->scriptPubKey) {
+								it->nValue += nChange;
+								nChange = 0;
+								reservekey.ReturnKey();
+								combineChange = true;
+								break;
+							}
+							++it;
+						}
+					}
+					else // send change to newly generated address
+					{
+						// Note: We use a new key here to keep it from being obvious which side is the change.
+						//  The drawback is that by not reusing a previous key, the change may be lost if a
+						//  backup is restored, if the backup doesn't have the new private key for the change.
+						//  If we reused the old key, it would be possible to add code to look for and
+						//  rediscover unknown transactions that were written with keys of ours to recover
+						//  post-backup change.
 
-                        // Reserve a new key pair from key pool
-                        CPubKey vchPubKey;
-                        bool ret;
-                        ret = reservekey.GetReservedKey(vchPubKey);
-                        assert(ret); // should never fail, as we just unlocked
+						// Reserve a new key pair from key pool
+						CPubKey vchPubKey;
+						bool ret;
+						ret = reservekey.GetReservedKey(vchPubKey);
+						assert(ret); // should never fail, as we just unlocked
 
-                        scriptChange = GetScriptForDestination(vchPubKey.GetID());
-                    }
+						scriptChange = GetScriptForDestination(vchPubKey.GetID());
+					}
 
-                    if (!combineChange) {
+                    if (!combineChange)
+					{
                         CTxOut newTxOut(nChange, scriptChange);
 
                         // Never create dust outputs; if we would, just
@@ -2766,10 +2878,11 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, CAmount> >& vecSend,
                             // Insert change txn at random position:
                             vector<CTxOut>::iterator position = txNew.vout.begin() + GetRandInt(txNew.vout.size() + 1);
                             txNew.vout.insert(position, newTxOut);
+							if(returnkeyregardless) reservekey.ReturnKey();
                         }
                     }
-                } else
-                    reservekey.ReturnKey();
+                }
+				else reservekey.ReturnKey();
 
                 // Fill vin
                 BOOST_FOREACH (const PAIRTYPE(const CWalletTx*, unsigned int) & coin, setCoins)
@@ -2828,11 +2941,11 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, CAmount> >& vecSend,
     return true;
 }
 
-bool CWallet::CreateTransaction(CScript scriptPubKey, const CAmount& nValue, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl, AvailableCoinsType coin_type, bool useIX, CAmount nFeePay)
+bool CWallet::CreateTransaction(CScript scriptPubKey, const CAmount& nValue, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl, AvailableCoinsType coin_type, bool useIX, CAmount nFeePay, std::string theChangeAddress)
 {
-    vector<pair<CScript, CAmount> > vecSend;
+    vector<pair<CScript, CAmount>> vecSend;
     vecSend.push_back(make_pair(scriptPubKey, nValue));
-    return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, strFailReason, coinControl, coin_type, useIX, nFeePay);
+    return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, strFailReason, coinControl, coin_type, useIX, nFeePay, theChangeAddress);
 }
 
 // ppcoin: create coin stake transaction
@@ -3533,6 +3646,48 @@ std::map<CTxDestination, CAmount> CWallet::GetAddressBalances()
 
     return balances;
 }
+
+/*CAmount GetWalletAddressBalance(const std::string &theAddress)
+{
+	// Currently this function is not yet used and has not been tested. Based on GetAddressBalances(). This function is overly expensive for what it does and shouldn't be used constantly.
+	CAmount balance = 0;
+	{
+		LOCK(cs_wallet);
+		BOOST_FOREACH(PAIRTYPE(uint256, CWalletTx) walletEntry, mapWallet)
+		{
+			CWalletTx* pcoin = &walletEntry.second;
+
+			if (!IsFinalTx(*pcoin) || !pcoin->IsTrusted())
+				continue;
+
+			if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
+				continue;
+
+			int nDepth = pcoin->GetDepthInMainChain();
+			if (nDepth < (pcoin->IsFromMe(ISMINE_ALL) ? 0 : 1))
+				continue;
+
+			for (unsigned int i = 0; i < pcoin->vout.size(); i++)
+			{
+				CTxDestination addr;
+
+				if (!ExtractDestination(pcoin->vout[i].scriptPubKey, addr)) continue;
+
+				CBitcoinAddress anAddress;
+				if(!anAddress.Set(addr)) continue;
+
+				if(anAddress.ToString() == theAddress)
+				{
+					CAmount n = IsSpent(walletEntry.first, i) ? 0 : pcoin->vout[i].nValue;
+
+					balance += n;
+				}
+			}
+		}
+	}
+
+	return balance;
+}*/
 
 set<set<CTxDestination> > CWallet::GetAddressGroupings()
 {

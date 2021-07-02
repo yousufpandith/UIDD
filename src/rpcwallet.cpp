@@ -2,11 +2,13 @@
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2021 The Uidd developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "amount.h"
 #include "base58.h"
+#include "coincontrol.h"
 #include "core_io.h"
 #include "init.h"
 #include "net.h"
@@ -340,8 +342,8 @@ UniValue sendtoaddress(const UniValue& params, bool fHelp)
             "\nSend an amount to a given address. The amount is a real and is rounded to the nearest 0.00000001\n" +
             HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"uiddaddress\"  (string, required) The uidd address to send to.\n"
-            "2. \"amount\"      (numeric, required) The amount in btc to send. eg 0.1\n"
+            "1. \"uiddaddress\"  (string, required) The bitcoin 2 address to send to.\n"
+            "2. \"amount\"      (numeric, required) The amount in uidd to send. eg 0.1\n"
             "3. \"comment\"     (string, optional) A comment used to store what the transaction is for. \n"
             "                             This is not part of the transaction, just kept in your wallet.\n"
             "4. \"comment-to\"  (string, optional) A comment to store the name of the person or organization \n"
@@ -624,7 +626,11 @@ CAmount GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMi
         wtx.GetAccountAmounts(strAccount, nReceived, nSent, nFee, filter);
 
         if (nReceived != 0 && wtx.GetDepthInMainChain() >= nMinDepth)
-            nBalance += nReceived;
+		{
+			nBalance += nReceived;
+			if (wtx.IsCoinStake() && nReceived > CENT * 60) nBalance -= CENT * 20; // Masternode reward deducted from the block reward.
+		}
+            
         nBalance -= nSent + nFee;
     }
 
@@ -634,10 +640,11 @@ CAmount GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMi
     return nBalance;
 }
 
+
 CAmount GetAccountBalance(const string& strAccount, int nMinDepth, const isminefilter& filter)
 {
-    CWalletDB walletdb(pwalletMain->strWalletFile);
-    return GetAccountBalance(walletdb, strAccount, nMinDepth, filter);
+   CWalletDB walletdb(pwalletMain->strWalletFile);
+   return GetAccountBalance(walletdb, strAccount, nMinDepth, filter);
 }
 
 
@@ -789,9 +796,9 @@ UniValue movecmd(const UniValue& params, bool fHelp)
 
 UniValue sendfrom(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() < 3 || params.size() > 6)
+    if (fHelp || params.size() < 3 || params.size() > 7)
         throw runtime_error(
-            "sendfrom \"fromaccount\" \"touiddaddress\" amount ( minconf \"comment\" \"comment-to\" )\n"
+            "sendfrom \"fromaccount\" \"touiddaddress\" amount ( minconf useswifttx \"comment\" \"comment-to\" )\n"
             "\nSent an amount from an account to a uidd address.\n"
             "The amount is a real and is rounded to the nearest 0.00000001." +
             HelpRequiringPassphrase() + "\n"
@@ -800,18 +807,19 @@ UniValue sendfrom(const UniValue& params, bool fHelp)
                                         "2. \"touiddaddress\"  (string, required) The uidd address to send funds to.\n"
                                         "3. amount                (numeric, required) The amount in btc. (transaction fee is added on top).\n"
                                         "4. minconf               (numeric, optional, default=1) Only use funds with at least this many confirmations.\n"
-                                        "5. \"comment\"           (string, optional) A comment used to store what the transaction is for. \n"
+										"5. UseSwiftTX            (boolean, optional, default=false) Send as a Swift Transaction.\n"
+                                        "6. \"comment\"           (string, optional) A comment used to store what the transaction is for. \n"
                                         "                                     This is not part of the transaction, just kept in your wallet.\n"
-                                        "6. \"comment-to\"        (string, optional) An optional comment to store the name of the person or organization \n"
+                                        "7. \"comment-to\"        (string, optional) An optional comment to store the name of the person or organization \n"
                                         "                                     to which you're sending the transaction. This is not part of the transaction, \n"
                                         "                                     it is just kept in your wallet.\n"
                                         "\nResult:\n"
                                         "\"transactionid\"        (string) The transaction id.\n"
                                         "\nExamples:\n"
-                                        "\nSend 0.01 btc from the default account to the address, must have at least 1 confirmation\n" +
+                                        "\nSend 0.01 uidd from the default account to the address, must have at least 1 confirmation\n" +
             HelpExampleCli("sendfrom", "\"\" \"XwnLY9Tf7Zsef8gMGL2fhWA9ZmMjt4KPwg\" 0.01") +
-            "\nSend 0.01 from the tabby account to the given address, funds must have at least 6 confirmations\n" + HelpExampleCli("sendfrom", "\"tabby\" \"XwnLY9Tf7Zsef8gMGL2fhWA9ZmMjt4KPwg\" 0.01 6 \"donation\" \"seans outpost\"") +
-            "\nAs a json rpc call\n" + HelpExampleRpc("sendfrom", "\"tabby\", \"XwnLY9Tf7Zsef8gMGL2fhWA9ZmMjt4KPwg\", 0.01, 6, \"donation\", \"seans outpost\""));
+            "\nSend 0.01 from the tabby account to the given address, funds must have at least 6 confirmations\n" + HelpExampleCli("sendfrom", "\"tabby\" \"XwnLY9Tf7Zsef8gMGL2fhWA9ZmMjt4KPwg\" 0.01 6 false \"donation\" \"seans outpost\"") +
+            "\nAs a json rpc call\n" + HelpExampleRpc("sendfrom", "\"tabby\", \"XwnLY9Tf7Zsef8gMGL2fhWA9ZmMjt4KPwg\", 0.01, 6, false, \"donation\", \"seans outpost\""));
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
@@ -824,21 +832,72 @@ UniValue sendfrom(const UniValue& params, bool fHelp)
     if (params.size() > 3)
         nMinDepth = params[3].get_int();
 
+	bool UseSwiftTX = false;
+	if (params.size() > 4) UseSwiftTX = params[4].get_bool();
+
     CWalletTx wtx;
     wtx.strFromAccount = strAccount;
-    if (params.size() > 4 && !params[4].isNull() && !params[4].get_str().empty())
-        wtx.mapValue["comment"] = params[4].get_str();
     if (params.size() > 5 && !params[5].isNull() && !params[5].get_str().empty())
-        wtx.mapValue["to"] = params[5].get_str();
+        wtx.mapValue["comment"] = params[5].get_str();
+    if (params.size() > 6 && !params[6].isNull() && !params[6].get_str().empty())
+        wtx.mapValue["to"] = params[6].get_str();
 
     EnsureWalletIsUnlocked();
 
-    // Check funds
-    CAmount nBalance = GetAccountBalance(strAccount, nMinDepth, ISMINE_SPENDABLE);
-    if (nAmount > nBalance)
-        throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Account has insufficient funds");
+	// Parse Uidd address
+	CScript scriptPubKey = GetScriptForDestination(address.Get());
 
-    SendMoney(address.Get(), nAmount, wtx);
+	CCoinControl* coinControl = NULL;
+	CBitcoinAddress FromAddress(strAccount);
+	CAmount TotalSpendable = 0;
+
+	// Check funds
+	if (FromAddress.IsValid())
+	{	// The account name is a valid UIDD address.
+		// Create coincontrol in order to only select coins belonging to this account.
+		coinControl = new CCoinControl();
+		coinControl->fAllowWatchOnly = false;
+		coinControl->destChange = FromAddress.Get(); // Set the change to be returned to the from address.
+		TotalSpendable = pwalletMain->GetSpendableCoinsOfAddress(FromAddress, coinControl, nMinDepth, nAmount + CENT); // the extra CENT as a spare for the fee.
+
+		if (nAmount > TotalSpendable)
+		{
+			delete coinControl;
+			throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient spendable funds");
+		}
+	}
+	else
+	{
+		CAmount nBalance = GetAccountBalance(strAccount, nMinDepth, ISMINE_SPENDABLE);
+		if (nAmount > nBalance) throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient funds");
+
+		TotalSpendable = nBalance;
+	}
+
+	// Create and send the transaction
+	string strError;
+	CReserveKey reservekey(pwalletMain);
+	CAmount nFeeRequired;
+	if (!pwalletMain->CreateTransaction(scriptPubKey, nAmount, wtx, reservekey, nFeeRequired, strError, coinControl, ALL_COINS, UseSwiftTX, (CAmount)0, strAccount))
+	{
+		if (nAmount + nFeeRequired <= TotalSpendable) // Enough funds, so some other error.
+		{
+			if (coinControl) delete coinControl;
+			throw JSONRPCError(RPC_WALLET_ERROR, strError);
+		}
+	}
+
+	if (nAmount + nFeeRequired > TotalSpendable)
+	{
+		strError = strprintf("Insufficient funds. You can send at most: %s. The fee is %s.", FormatMoney(TotalSpendable - nFeeRequired), FormatMoney(nFeeRequired));
+		if (coinControl) delete coinControl;
+		throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, strError);
+	}
+
+	if (coinControl) delete coinControl;
+
+	if (!pwalletMain->CommitTransaction(wtx, reservekey, (!UseSwiftTX ? "tx" : "ix")))
+		throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
 
     return wtx.GetHash().GetHex();
 }
@@ -1181,23 +1240,40 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
     bool fAllAccounts = (strAccount == string("*"));
     bool involvesWatchonly = wtx.IsFromMe(ISMINE_WATCH_ONLY);
 
+	CAmount stakinginputamount = 0;
+
     // Sent
-    if ((!listSent.empty() || nFee != 0) && (fAllAccounts || strAccount == strSentAccount)) {
-        BOOST_FOREACH (const COutputEntry& s, listSent) {
-            UniValue entry(UniValue::VOBJ);
-            if (involvesWatchonly || (::IsMine(*pwalletMain, s.destination) & ISMINE_WATCH_ONLY))
-                entry.push_back(Pair("involvesWatchonly", true));
-            entry.push_back(Pair("account", strSentAccount));
-            MaybePushAddress(entry, s.destination);
-            std::map<std::string, std::string>::const_iterator it = wtx.mapValue.find("DS");
-            entry.push_back(Pair("category", (it != wtx.mapValue.end() && it->second == "1") ? "darksent" : "send"));
-            entry.push_back(Pair("amount", ValueFromAmount(-s.amount)));
-            entry.push_back(Pair("vout", s.vout));
-            entry.push_back(Pair("fee", ValueFromAmount(-nFee)));
-            if (fLong)
-                WalletTxToJSON(wtx, entry);
-            ret.push_back(entry);
-        }
+    if (!listSent.empty())
+	{
+		BOOST_FOREACH(const COutputEntry& s, listSent)
+		{
+			// UIDD: Staking input handling.
+			if (wtx.IsCoinStake() && s.amount != 0 && wtx.GetDepthInMainChain() >= nMinDepth)
+			{
+				stakinginputamount = s.amount;
+				break;
+			}
+		}
+
+		if(fAllAccounts || strAccount == strSentAccount)
+		{
+			BOOST_FOREACH (const COutputEntry& s, listSent)
+			{
+				UniValue entry(UniValue::VOBJ);
+				if (involvesWatchonly || (::IsMine(*pwalletMain, s.destination) & ISMINE_WATCH_ONLY))
+					entry.push_back(Pair("involvesWatchonly", true));
+				entry.push_back(Pair("account", strSentAccount));
+				MaybePushAddress(entry, s.destination);
+				std::map<std::string, std::string>::const_iterator it = wtx.mapValue.find("DS");
+				entry.push_back(Pair("category", (it != wtx.mapValue.end() && it->second == "1") ? "darksent" : "send"));
+				entry.push_back(Pair("amount", ValueFromAmount(-s.amount)));
+				entry.push_back(Pair("vout", s.vout));
+				entry.push_back(Pair("fee", ValueFromAmount(-nFee)));
+				if (fLong)
+					WalletTxToJSON(wtx, entry);
+				ret.push_back(entry);
+			}
+		}
     }
 
     // Received
@@ -1212,18 +1288,22 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
                     entry.push_back(Pair("involvesWatchonly", true));
                 entry.push_back(Pair("account", account));
                 MaybePushAddress(entry, r.destination);
-                if (wtx.IsCoinBase()) {
+                if (wtx.IsCoinBase())
+				{
                     if (wtx.GetDepthInMainChain() < 1)
                         entry.push_back(Pair("category", "orphan"));
                     else if (wtx.GetBlocksToMaturity() > 0)
                         entry.push_back(Pair("category", "immature"));
                     else
                         entry.push_back(Pair("category", "generate"));
-                } else {
-                    entry.push_back(Pair("category", "receive"));
                 }
-                entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
+				else entry.push_back(Pair("category", "receive"));
+
+				if (stakinginputamount != 0 && r.amount > 60 * CENT && r.vout < 2) entry.push_back(Pair("amount", ValueFromAmount((-nFee) - 20 * CENT))); // nFee minus masternode reward equals the staking reward.
+                else entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
+
                 entry.push_back(Pair("vout", r.vout));
+
                 if (fLong)
                     WalletTxToJSON(wtx, entry);
                 ret.push_back(entry);
@@ -1328,7 +1408,7 @@ UniValue listtransactions(const UniValue& params, bool fHelp)
 
     const CWallet::TxItems & txOrdered = pwalletMain->wtxOrdered;
 
-    // iterate backwards until we have nCount items to return:
+    // iterate backwards until we have nCount + nFrom items to return:
     for (CWallet::TxItems::const_reverse_iterator it = txOrdered.rbegin(); it != txOrdered.rend(); ++it) {
         CWalletTx* const pwtx = (*it).second.first;
         if (pwtx != 0)
@@ -1337,14 +1417,12 @@ UniValue listtransactions(const UniValue& params, bool fHelp)
         if (pacentry != 0)
             AcentryToJSON(*pacentry, strAccount, ret);
 
-        if ((int)ret.size() >= (nCount + nFrom)) break;
+        if ((int)ret.size() >= (nCount + nFrom)) break; // Cannot just skip nFrom amount of transactions in this loop because not all are from the requested account.
     }
     // ret is newest to oldest
 
-    if (nFrom > (int)ret.size())
-        nFrom = ret.size();
-    if ((nFrom + nCount) > (int)ret.size())
-        nCount = ret.size() - nFrom;
+    if (nFrom > (int)ret.size()) nFrom = ret.size();
+    if ((nFrom + nCount) > (int)ret.size()) nCount = ret.size() - nFrom;
 
     vector<UniValue> arrTmp = ret.getValues();
 
@@ -1356,7 +1434,7 @@ UniValue listtransactions(const UniValue& params, bool fHelp)
     if (last != arrTmp.end()) arrTmp.erase(last, arrTmp.end());
     if (first != arrTmp.begin()) arrTmp.erase(arrTmp.begin(), first);
 
-    std::reverse(arrTmp.begin(), arrTmp.end()); // Return oldest to newest
+    //std::reverse(arrTmp.begin(), arrTmp.end()); // This would return oldest to newest which is usually not wanted.
 
     ret.clear();
     ret.setArray();
@@ -1370,7 +1448,7 @@ UniValue listaccounts(const UniValue& params, bool fHelp)
     if (fHelp || params.size() > 2)
         throw runtime_error(
             "listaccounts ( minconf includeWatchonly)\n"
-            "\nReturns Object that has account names as keys, account balances as values.\n"
+            "\nReturns Object that has account names as keys, and unreliable account balance totals as values.\n"
             "\nArguments:\n"
             "1. minconf          (numeric, optional, default=1) Only include transactions with at least this many confirmations\n"
             "2. includeWatchonly (bool, optional, default=false) Include balances in watchonly addresses (see 'importaddress')\n"
@@ -1413,14 +1491,19 @@ UniValue listaccounts(const UniValue& params, bool fHelp)
             continue;
         wtx.GetAmounts(listReceived, listSent, nFee, strSentAccount, includeWatchonly);
         mapAccountBalances[strSentAccount] -= nFee;
-        BOOST_FOREACH (const COutputEntry& s, listSent)
-            mapAccountBalances[strSentAccount] -= s.amount;
-        if (nDepth >= nMinDepth) {
+
+        BOOST_FOREACH (const COutputEntry& s, listSent) mapAccountBalances[strSentAccount] -= s.amount;
+
+        if (nDepth >= nMinDepth)
+		{
             BOOST_FOREACH (const COutputEntry& r, listReceived)
-                if (pwalletMain->mapAddressBook.count(r.destination))
-                    mapAccountBalances[pwalletMain->mapAddressBook[r.destination].name] += r.amount;
-                else
-                    mapAccountBalances[""] += r.amount;
+			{
+				if (pwalletMain->mapAddressBook.count(r.destination))
+				{
+					mapAccountBalances[pwalletMain->mapAddressBook[r.destination].name] += r.amount;
+				}
+                else  mapAccountBalances[""] += r.amount;
+			}
         }
     }
 
@@ -1971,7 +2054,7 @@ UniValue settxfee(const UniValue& params, bool fHelp)
     if (params[0].get_real() != 0.0)
         nAmount = AmountFromValue(params[0]); // rejects 0.0 amounts
 
-    payTxFee = CFeeRate(nAmount, 1000);
+    payTxFee = CFeeRate(nAmount);
     return true;
 }
 
